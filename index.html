@@ -26,6 +26,7 @@
     .stage{position:relative;width:min(1200px,95vw);aspect-ratio:55/34;background:#0b5f2a;border:12px solid #1a202c;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
     canvas{width:100%;height:100%;display:block;background:transparent}
 
+    /* 통합 게이지 */
     .gwrap{position:absolute;left:12px;right:12px;bottom:12px;display:flex;justify-content:space-between;pointer-events:none}
     .gpanel{display:grid;gap:6px;min-width:240px;max-width:42%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px;backdrop-filter:blur(6px)}
     .gtitle{font-size:11px;color:var(--muted)}
@@ -52,6 +53,7 @@
     .goalBanner{position:absolute;inset:0;display:none;place-items:center;color:white;font-weight:900;font-size:clamp(32px,6vw,72px);text-shadow:0 6px 30px rgba(0,0,0,.6);pointer-events:none;}
     .toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.08);font-size:12px;color:#e2f7eb;display:none}
 
+    /* 모바일 터치패드 */
     .touchpad{position:absolute;inset:auto auto 14px 14px;display:none;gap:12px;align-items:end}
     .joy{position:relative;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1)}
     .knob{position:absolute;left:50%;top:50%;width:56px;height:56px;border-radius:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3)}
@@ -147,6 +149,7 @@
           </div>
         </div>
 
+        <!-- 통합 게이지 1P/2P -->
         <div class="gwrap">
           <div class="gpanel" id="g1">
             <div class="gtitle">1P · <span class="modeTag" id="g1_mode">IDLE</span> · <span id="g1_pct">0%</span></div>
@@ -158,6 +161,7 @@
           </div>
         </div>
 
+        <!-- 모바일 터치 패드 -->
         <div class="touchpad" id="touchpad">
           <div class="joy" id="joy"><div class="knob" id="knob"></div></div>
           <div class="act">
@@ -172,6 +176,23 @@
     </div>
   </div>
 
-  <script type="module" src="./main.js"></script>
+  <!-- 모듈 로더: 캐시무효 + 에러 오버레이 -->
+  <script type="module">
+    (async () => {
+      try {
+        await import('./main.js?v=20250928');
+      } catch (err) {
+        const box = document.createElement('pre');
+        box.textContent = '[Module Load Error]\\n' + (err && (err.stack || err.message) || err);
+        Object.assign(box.style, {
+          position:'fixed', left:'12px', right:'12px', bottom:'12px',
+          background:'rgba(0,0,0,.85)', color:'#fff', padding:'12px',
+          border:'1px solid rgba(255,255,255,.2)', borderRadius:'12px',
+          zIndex: 999999, whiteSpace:'pre-wrap', maxHeight:'40vh', overflow:'auto', font:'12px ui-monospace, SFMono, Menlo, Consolas, monospace'
+        });
+        document.body.appendChild(box);
+      }
+    })();
+  </script>
 </body>
 </html>

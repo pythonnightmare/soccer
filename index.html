@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>11v11 STREET FOOTBALL · FAST</title>
+  <style>
+    :root{
+      --bg:#0b0f16; --panel:#101827; --panel-2:#0c1422; --ink:#e6edf3; --muted:#a7b3c6;
+      --accent:#3cc96b; --accent-2:#f0b429; --danger:#f66; --shadow:0 12px 36px rgba(0,0,0,.38); --radius:16px;
+      --teamA:#2aa1ff; --teamB:#ff7b54;
+    }
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    #root{display:grid;grid-template-rows:auto 1fr;min-height:100dvh}
+
+    header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:12px 16px;background:linear-gradient(0deg,#0b0f18,#0f1422);border-bottom:1px solid #1e2633}
+    .brand{font-size:12px;color:var(--muted);opacity:.9}
+    .scoreboard{justify-self:center;display:flex;align-items:center;gap:14px;padding:8px 12px;border-radius:999px;border:1px solid #2a3546;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);font-weight:900;letter-spacing:.4px}
+    .sb-badge{padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);font-size:13px}
+    .a{background:rgba(42,161,255,.18);border-color:rgba(42,161,255,.35)}
+    .b{background:rgba(255,123,84,.18);border-color:rgba(255,123,84,.35)}
+    .timer{min-width:70px;text-align:center}
+    .help{justify-self:end;color:var(--muted);font-size:12px}
+
+    .wrap{position:relative;display:grid;place-items:center;padding:12px}
+    .stage{position:relative;width:min(1200px,95vw);aspect-ratio:55/34;background:#0b5f2a;border:12px solid #1a202c;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    canvas{width:100%;height:100%;display:block;background:transparent}
+
+    .gwrap{position:absolute;left:12px;right:12px;bottom:12px;display:flex;justify-content:space-between;pointer-events:none}
+    .gpanel{display:grid;gap:6px;min-width:240px;max-width:42%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px;backdrop-filter:blur(6px)}
+    .gtitle{font-size:11px;color:var(--muted)}
+    .hbar{position:relative;height:14px;background:#0f1520;border:1px solid #2a3546;border-radius:9px;overflow:hidden}
+    .fill{position:absolute;inset:0 0 0 0;width:0%;background:linear-gradient(90deg, rgba(60,201,107,.95), rgba(60,201,107,.25));transition:width .06s}
+    .modeTag{font-weight:900}
+
+    .menu{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+    .card{width:min(980px,92%);background:var(--panel);border:1px solid #263142;border-radius:20px;box-shadow:var(--shadow);padding:18px;display:grid;gap:14px}
+    .titleRow{display:flex;align-items:center;justify-content:space-between}
+    .title{font-weight:900;letter-spacing:.6px}
+    .seg{display:flex;gap:8px}
+    .seg button{flex:1;padding:12px 14px;font-weight:900;border-radius:12px;border:1px solid #2a3546;background:#0f1520;color:var(--ink);cursor:pointer}
+    .seg button.active{outline:2px solid var(--accent)}
+    .kbwrap{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .kb{background:var(--panel-2);border:1px solid #2a3546;border-radius:14px;padding:12px}
+    .kb h3{margin:0 0 8px 0;color:#a7ffe0;font-size:14px}
+    .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:12px;color:#cde5ff}
+    .grid2 .t{color:#8db1ff}
+    .actions{display:flex;gap:10px;justify-content:flex-end}
+    .btn{padding:12px 16px;border-radius:12px;border:1px solid #2a3546;background:#111a29;color:var(--ink);cursor:pointer;font-weight:900}
+    .btn.primary{background:var(--accent);border-color:#1f7e4a;color:#07160f}
+
+    .goalBanner{position:absolute;inset:0;display:none;place-items:center;color:white;font-weight:900;font-size:clamp(32px,6vw,72px);text-shadow:0 6px 30px rgba(0,0,0,.6);pointer-events:none;}
+    .toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.08);font-size:12px;color:#e2f7eb;display:none}
+
+    .touchpad{position:absolute;inset:auto auto 14px 14px;display:none;gap:12px;align-items:end}
+    .joy{position:relative;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1)}
+    .knob{position:absolute;left:50%;top:50%;width:56px;height:56px;border-radius:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3)}
+    .act{display:grid;gap:10px}
+    .abtn{width:68px;height:68px;border-radius:50%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);display:grid;place-items:center;font-weight:900}
+    .abtn:active{background:rgba(255,255,255,.2)}
+    @media (pointer:coarse){ .touchpad{display:flex} .help{display:none} }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <header>
+      <div class="brand">⚽ 11v11 STREET FOOTBALL · FAST</div>
+      <div class="scoreboard" id="scoreboard">
+        <span class="sb-badge a" id="sbA">TEAM A · 0</span>
+        <span class="timer" id="sbTime">03:00</span>
+        <span class="sb-badge b" id="sbB">TEAM B · 0</span>
+      </div>
+      <div class="help">1P: WASD · 슛 J(길게=파워/커브) · 패스 K(길게=쓰루) · 커브 U · 태클 H · 변경 L | 2P: ←↑→↓/1·2·3·4·5</div>
+    </header>
+
+    <div class="wrap">
+      <div class="stage" id="stage">
+        <canvas id="game" width="1100" height="680" tabindex="0" aria-label="게임 캔버스"></canvas>
+
+        <div class="menu" id="menu">
+          <div class="card">
+            <div class="titleRow">
+              <div class="title">KICK-OFF</div>
+              <div class="seg" role="tablist">
+                <button id="mode1" class="active" aria-pressed="true">SOLO (1P vs AI)</button>
+                <button id="mode2" aria-pressed="false">DUO (1P vs 2P)</button>
+              </div>
+            </div>
+
+            <div class="kbwrap">
+              <div class="kb">
+                <h3>조작</h3>
+                <div class="grid2">
+                  <div class="t">1P</div><div>이동 WASD · <b>슛 J</b>(길게=파워/커브) · <b>패스 K</b>(길게=쓰루) · 커브 U · 태클 H · 변경 L</div>
+                  <div class="t">2P</div><div>이동 ←↑→↓ · 패스 1(길게=쓰루) · 커브 4 · 슛 2 · 태클 5 · 변경 3</div>
+                </div>
+              </div>
+
+              <div class="kb">
+                <h3>커스터마이즈 & 강화</h3>
+                <div class="grid2" style="align-items:center">
+                  <div class="t">Team A 색</div><div><input id="colorA" type="color" value="#2aa1ff" /></div>
+                  <div class="t">Team B 색</div><div><input id="colorB" type="color" value="#ff7b54" /></div>
+
+                  <div class="t">강화 팀</div>
+                  <div>
+                    <select id="teamSel">
+                      <option value="A">Team A</option>
+                      <option value="B">Team B</option>
+                    </select>
+                  </div>
+
+                  <div class="t">강화 스탯</div>
+                  <div>
+                    <select id="statSel">
+                      <option value="spd">SPD(이동)</option>
+                      <option value="shot">SHOT(슛)</option>
+                      <option value="tackle">TACKLE(태클)</option>
+                    </select>
+                  </div>
+
+                  <div class="t">강화 정보</div>
+                  <div><span id="tierLabel">SPD +0</span> · <span id="rateLabel">성공률 80%</span></div>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:10px;">
+                  <button class="btn" id="upgradeBtn">강화 시도</button>
+                  <button class="btn" id="resetUpg">강화 초기화</button>
+                </div>
+                <p style="margin:10px 0 0 0; color:#a7b3c6; font-size:12px">
+                  확률형 강화: +0→+1 80%, +1→+2 60%, +2→+3 40%, +3→+4 20%, +4→+5 10% (3강 이상 실패 시 -1 하락).<br/>
+                  티어당 팀 전체 해당 스탯이 +4% 상승. 설정은 브라우저에 저장됩니다.
+                </p>
+              </div>
+            </div>
+
+            <div class="kb">
+              <h3>포지션 특성</h3>
+              <div class="grid2">
+                <div class="t">수비</div><div>CB/LCB/RCB: 강한 태클 · LB/RB: 빠름</div>
+                <div class="t">중원</div><div>CDM: 수비적 · CM: 균형 · CAM: 공격적</div>
+                <div class="t">윙</div><div>LW/RW: 빠름 · 좋은 슛</div>
+                <div class="t">ST</div><div>매우 좋은 슛</div>
+              </div>
+            </div>
+
+            <div class="actions"><button class="btn primary" id="startBtn">게임 시작</button></div>
+          </div>
+        </div>
+
+        <div class="gwrap">
+          <div class="gpanel" id="g1">
+            <div class="gtitle">1P · <span class="modeTag" id="g1_mode">IDLE</span> · <span id="g1_pct">0%</span></div>
+            <div class="hbar"><div class="fill" id="g1_fill"></div></div>
+          </div>
+          <div class="gpanel" id="g2">
+            <div class="gtitle">2P · <span class="modeTag" id="g2_mode">IDLE</span> · <span id="g2_pct">0%</span></div>
+            <div class="hbar"><div class="fill" id="g2_fill"></div></div>
+          </div>
+        </div>
+
+        <div class="touchpad" id="touchpad">
+          <div class="joy" id="joy"><div class="knob" id="knob"></div></div>
+          <div class="act">
+            <button class="abtn" id="tpPass">패스</button>
+            <button class="abtn" id="tpShoot">슛</button>
+          </div>
+        </div>
+
+        <div class="goalBanner" id="goalBanner">GOAL!</div>
+        <div class="toast" id="toast">캔버스를 클릭해 포커스를 주세요 (키보드/터치 조작 활성화)</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

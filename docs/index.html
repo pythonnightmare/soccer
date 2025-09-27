@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>11v11 STREET FOOTBALL · FAST</title>
 
+  <!-- GitHub Pages 프로젝트 경로 고정 -->
+  <base href="/soccer/">
+
   <style>
     :root{
       --bg:#0b0f16; --panel:#101827; --panel-2:#0c1422; --ink:#e6edf3; --muted:#a7b3c6;
@@ -68,13 +71,25 @@
     .abtn:active{background:rgba(255,255,255,.2)}
     @media (pointer:coarse){ .touchpad{display:flex} .help{display:none} }
 
+    /* 선수관리 오버레이 */
+    .mgr{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);z-index:50}
+    .mgr .panel{width:min(980px,92%);background:var(--panel);border:1px solid #263142;border-radius:20px;box-shadow:var(--shadow);padding:16px;display:grid;gap:12px}
+    .mgr .tabs{display:flex;gap:8px}
+    .mgr .tabs button{flex:0 0 auto;padding:10px 12px;border-radius:10px;border:1px solid #2a3546;background:#0f1520;color:var(--ink);cursor:pointer}
+    .mgr .tabs button.active{outline:2px solid var(--accent)}
+    .plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+    .pitem{display:flex;align-items:center;justify-content:space-between;background:var(--panel-2);border:1px solid #2a3546;border-radius:12px;padding:10px}
+    .tiny{font-size:11px;color:#a0b9ff}
+    .pdetail{display:none;background:var(--panel-2);border:1px solid #2a3546;border-radius:12px;padding:12px}
+    .mgr .hdr{display:flex;align-items:center;justify-content:space-between}
+
     /* 에러 오버레이 */
     #err{position:fixed;inset:0;display:none;place-items:center;background:rgba(20,0,0,.92);color:#fff;z-index:9999}
     #err .box{max-width:920px;width:92%;background:#1e0b0b;border:1px solid #422;border-radius:14px;padding:16px;box-shadow:0 12px 36px rgba(0,0,0,.5)}
     #err pre{white-space:pre-wrap;word-break:break-word;background:#120808;border:1px solid #533;padding:12px;border-radius:10px}
   </style>
 
-  <!-- 전역 에러 캡쳐: 런타임 오류가 나면 바로 화면에 표시 -->
+  <!-- 전역 에러 캡쳐: import 실패/런타임 오류를 화면에 띄움 -->
   <script>
     window.addEventListener('error', e => {
       const el = document.getElementById('err'); if(!el) return;
@@ -97,13 +112,18 @@
         <span class="timer" id="sbTime">03:00</span>
         <span class="sb-badge b" id="sbB">TEAM B · 0</span>
       </div>
-      <div class="help">1P: WASD · 슛 J(길게=파워/커브) · 패스 K(길게=쓰루) · 커브 U · 태클 H · 변경 L | 2P: ←↑→↓/1·2·3·4·5</div>
+      <div class="help">
+        1P: WASD · 슛 J(길게=파워/커브) · 패스 K(길게=쓰루) · 커브 U · 태클 H · 변경 L |
+        2P: ←↑→↓/1·2·3·4·5 |
+        <button class="btn" id="mgrBtn" style="margin-left:8px;padding:6px 10px;">선수관리</button>
+      </div>
     </header>
 
     <div class="wrap">
       <div class="stage" id="stage">
         <canvas id="game" width="1100" height="680" tabindex="0" aria-label="게임 캔버스"></canvas>
 
+        <!-- 시작 메뉴 -->
         <div class="menu" id="menu">
           <div class="card">
             <div class="titleRow">
@@ -124,49 +144,32 @@
               </div>
 
               <div class="kb">
-                <h3>커스터마이즈 & 강화</h3>
+                <h3>팀 색 & 강화</h3>
                 <div class="grid2" style="align-items:center">
                   <div class="t">Team A 색</div><div><input id="colorA" type="color" value="#2aa1ff" /></div>
                   <div class="t">Team B 색</div><div><input id="colorB" type="color" value="#ff7b54" /></div>
-                  <div class="t">강화 팀</div>
-                  <div>
-                    <label><input type="radio" name="uphTeam" value="A" checked> Team A</label>
-                    <label style="margin-left:8px"><input type="radio" name="uphTeam" value="B"> Team B</label>
-                  </div>
-                  <div class="t">강화 스탯</div>
-                  <div>
-                    <select id="uphStat">
-                      <option value="spd">SPD(이동)</option>
-                      <option value="shot">SHOT(슛)</option>
-                      <option value="tackle">TACKLE(태클)</option>
-                    </select>
-                  </div>
-                  <div class="t">강화 정보</div>
-                  <div><span id="uphInfo">SPD +0 · 성공률 80%</span></div>
-                </div>
-                <div class="actions">
-                  <button class="btn" id="uphReset">강화 초기화</button>
-                  <button class="btn primary" id="uphTry">강화 시도</button>
+                  <div class="t">선수관리</div><div><button class="btn" id="openMgrFromMenu">강화/관리 열기</button></div>
                 </div>
               </div>
-            </div>
 
-            <div class="kb">
-              <h3>포지션 특성</h3>
-              <div class="grid2">
-                <div class="t">수비</div><div>CB/LCB/RCB: 강한 태클 · LB/RB: 빠름</div>
-                <div class="t">중원</div><div>CDM: 수비적 · CM: 균형 · CAM: 공격적</div>
-                <div class="t">윙</div><div>LW/RW: 빠름 · 좋은 슛</div>
-                <div class="t">ST</div><div>매우 좋은 슛</div>
+              <div class="kb">
+                <h3>포지션 특성</h3>
+                <div class="grid2">
+                  <div class="t">수비</div><div>CB/LCB/RCB: 강한 태클 · LB/RB: 빠름</div>
+                  <div class="t">중원</div><div>CDM: 수비적 · CM: 균형 · CAM: 공격적</div>
+                  <div class="t">윙</div><div>LW/RW: 빠름 · 좋은 슛</div>
+                  <div class="t">ST</div><div>매우 좋은 슛</div>
+                </div>
               </div>
-            </div>
 
-            <div class="actions">
-              <button class="btn primary" id="startBtn">게임 시작</button>
+              <div class="actions">
+                <button class="btn primary" id="startBtn">게임 시작</button>
+              </div>
             </div>
           </div>
         </div>
 
+        <!-- 게이지 -->
         <div class="gwrap">
           <div class="gpanel" id="g1">
             <div class="gtitle">1P · <span class="modeTag" id="g1_mode">IDLE</span> · <span id="g1_pct">0%</span></div>
@@ -178,6 +181,7 @@
           </div>
         </div>
 
+        <!-- 모바일 터치패드 -->
         <div class="touchpad" id="touchpad">
           <div class="joy" id="joy"><div class="knob" id="knob"></div></div>
           <div class="act">
@@ -192,49 +196,46 @@
     </div>
   </div>
 
+  <!-- 선수관리 오버레이 -->
+  <div class="mgr" id="mgr">
+    <div class="panel">
+      <div class="hdr">
+        <div style="font-weight:900">선수 관리 · 강화</div>
+        <button class="btn" id="mgrClose">닫기</button>
+      </div>
+      <div class="tabs">
+        <button id="tabA" class="active">TEAM A</button>
+        <button id="tabB">TEAM B</button>
+      </div>
+
+      <div class="plist" id="plist"></div>
+
+      <div class="pdetail" id="pdetail">
+        <div style="font-weight:900" id="pdTitle">A · ST</div>
+        <div class="tiny" id="pdSub">확률형 강화</div>
+        <div class="grid2" style="margin-top:8px">
+          <div class="t">SPD</div><div>현재 <span id="spdTier">+0</span> <button class="btn" id="spdUp" style="margin-left:8px">강화</button></div>
+          <div class="t">SHOT</div><div>현재 <span id="shotTier">+0</span> <button class="btn" id="shotUp" style="margin-left:8px">강화</button></div>
+          <div class="t">TACKLE</div><div>현재 <span id="tacTier">+0</span> <button class="btn" id="tacUp" style="margin-left:8px">강화</button></div>
+          <div class="t">확률</div><div id="pdRate">성공률: 80%</div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="pdReset">초기화</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <noscript>
     <div style="position:fixed;inset:0;display:grid;place-items:center;background:#0b0f16;color:#fff">
       자바스크립트가 꺼져 있어요. JS를 켜고 새로고침 해주세요.
     </div>
   </noscript>
 
-  <!-- ✅ 안전 로더: 경로 자동감지 + 다단 로드 + 실패 시 화면에 에러 표시 -->
-  <div id="err"><div class="box"><h3>로딩 오류</h3><pre></pre></div></div>
-  <script type="module">
-    // GitHub Pages 프로젝트 경로 자동 추정
-    const path = location.pathname;
-    let base = '/';
-    // /username.github.io/ (user pages) vs /repo/ (project pages) 대응
-    // 보통은 /soccer/ 로 떨어지므로 아래가 base가 됩니다.
-    const m = path.match(/^\/([^/]+)\/?/); // 첫 세그먼트
-    if (m && m[1] !== 'index.html') base = '/' + m[1].replace(/index\.html$/,'') + '/';
+  <!-- 오류 메시지(있을 때만 표시) -->
+  <div id="err"><div class="box"><h3>로딩/실행 오류</h3><pre></pre></div></div>
 
-    const candidates = [
-      `${base}main.js`,     // 가장 가능성 큼 → /soccer/main.js
-      '/soccer/main.js',    // 절대 경로 고정
-      './main.js',          // 상대
-      'main.js'             // 느슨한 상대
-    ];
-
-    let ok = false, lastErr = null, tried = [];
-    for (const src of candidates) {
-      try {
-        tried.push(src);
-        await import(src + (src.includes('?') ? '' : `?v=${Date.now()}`));
-        ok = true;
-        break;
-      } catch (e) {
-        lastErr = e;
-        console.warn('[loader] fail:', src, e);
-      }
-    }
-    if (!ok) {
-      const el = document.getElementById('err');
-      el.style.display='grid';
-      el.querySelector('pre').textContent =
-        `main.js 로드를 실패했습니다.\n\n시도한 경로:\n- ` + tried.join('\n- ') +
-        `\n\n마지막 에러:\n${String(lastErr)}\n\n※ 레포 root(브랜치 Pages 설정) 에 main.js 가 존재하는지 확인하세요.`;
-    }
-  </script>
+  <!-- 메인 모듈 (physics.js / ai.js는 main.js 내부 import) -->
+  <script type="module" src="main.js"></script>
 </body>
 </html>

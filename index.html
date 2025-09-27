@@ -24,7 +24,6 @@
     .help{justify-self:end;color:var(--muted);font-size:12px}
 
     .wrap{position:relative;display:grid;place-items:center;padding:12px}
-    /* 화면/스킨에 맞춰 자동 확대:  clamp(최소, 선호, 최대)  */
     .stage{
       position:relative;
       width:clamp(320px, min(1200px, 96vw), 1400px);
@@ -34,7 +33,6 @@
     }
     canvas{width:100%;height:100%;display:block;background:transparent}
 
-    /* 통합 게이지 */
     .gwrap{position:absolute;left:12px;right:12px;bottom:12px;display:flex;justify-content:space-between;pointer-events:none}
     .gpanel{display:grid;gap:6px;min-width:240px;max-width:42%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px;backdrop-filter:blur(6px)}
     .gtitle{font-size:11px;color:var(--muted)}
@@ -69,7 +67,26 @@
     .abtn{width:68px;height:68px;border-radius:50%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);display:grid;place-items:center;font-weight:900}
     .abtn:active{background:rgba(255,255,255,.2)}
     @media (pointer:coarse){ .touchpad{display:flex} .help{display:none} }
+
+    /* 에러 오버레이 */
+    #err{position:fixed;inset:0;display:none;place-items:center;background:rgba(20,0,0,.92);color:#fff;z-index:9999}
+    #err .box{max-width:920px;width:92%;background:#1e0b0b;border:1px solid #422;border-radius:14px;padding:16px;box-shadow:0 12px 36px rgba(0,0,0,.5)}
+    #err pre{white-space:pre-wrap;word-break:break-word;background:#120808;border:1px solid #533;padding:12px;border-radius:10px}
   </style>
+
+  <!-- 전역 에러 캡쳐: 런타임 오류가 나면 바로 화면에 표시 -->
+  <script>
+    window.addEventListener('error', e => {
+      const el = document.getElementById('err'); if(!el) return;
+      el.style.display='grid';
+      el.querySelector('pre').textContent = 'JS Error: ' + (e.message||e.error||e.filename||'') + '\n' + (e.error && e.error.stack ? e.error.stack : '');
+    });
+    window.addEventListener('unhandledrejection', e => {
+      const el = document.getElementById('err'); if(!el) return;
+      el.style.display='grid';
+      el.querySelector('pre').textContent = 'Unhandled Promise Rejection: ' + (e.reason && e.reason.stack ? e.reason.stack : String(e.reason));
+    });
+  </script>
 </head>
 <body>
   <div id="root">
@@ -87,7 +104,6 @@
       <div class="stage" id="stage">
         <canvas id="game" width="1100" height="680" tabindex="0" aria-label="게임 캔버스"></canvas>
 
-        <!-- 메인 메뉴 -->
         <div class="menu" id="menu">
           <div class="card">
             <div class="titleRow">
@@ -98,7 +114,6 @@
               </div>
             </div>
 
-            <!-- 커스터마이즈 & 강화 (색/스탯) -->
             <div class="kbwrap">
               <div class="kb">
                 <h3>조작</h3>
@@ -133,10 +148,6 @@
                   <button class="btn" id="uphReset">강화 초기화</button>
                   <button class="btn primary" id="uphTry">강화 시도</button>
                 </div>
-                <div class="tiny">
-                  확률형 강화: +0→+1 80%, +1→+2 60%, +2→+3 40%, +3→+4 20%, +4→+5 10% (3강 이상 실패 시 -1 하락).<br/>
-                  티어당 팀 전체 해당 스탯이 +4% 상승. 설정은 브라우저에 저장됩니다.
-                </div>
               </div>
             </div>
 
@@ -156,7 +167,6 @@
           </div>
         </div>
 
-        <!-- 통합 게이지 1P/2P -->
         <div class="gwrap">
           <div class="gpanel" id="g1">
             <div class="gtitle">1P · <span class="modeTag" id="g1_mode">IDLE</span> · <span id="g1_pct">0%</span></div>
@@ -168,7 +178,6 @@
           </div>
         </div>
 
-        <!-- 모바일 터치 패드 -->
         <div class="touchpad" id="touchpad">
           <div class="joy" id="joy"><div class="knob" id="knob"></div></div>
           <div class="act">
@@ -189,41 +198,43 @@
     </div>
   </noscript>
 
-  <!-- ⚙ 안전 모듈 로더: /soccer/main.js → ./main.js → main.js 순으로 시도 -->
+  <!-- ✅ 안전 로더: 경로 자동감지 + 다단 로드 + 실패 시 화면에 에러 표시 -->
+  <div id="err"><div class="box"><h3>로딩 오류</h3><pre></pre></div></div>
   <script type="module">
-    (async () => {
-      const candidates = [
-        '/soccer/main.js',   // GitHub Pages 프로젝트 경로 절대
-        './main.js',         // 동일 디렉터리 상대
-        'main.js'            // 느슨한 상대
-      ];
-      let ok = false, lastErr = null;
-      for (const src of candidates) {
-        try {
-          await import(src + (src.includes('?') ? '' : `?v=${Date.now()}`));
-          ok = true;
-          break;
-        } catch (e) {
-          console.warn('[loader] fail:', src, e);
-          lastErr = e;
-        }
+    // GitHub Pages 프로젝트 경로 자동 추정
+    const path = location.pathname;
+    let base = '/';
+    // /username.github.io/ (user pages) vs /repo/ (project pages) 대응
+    // 보통은 /soccer/ 로 떨어지므로 아래가 base가 됩니다.
+    const m = path.match(/^\/([^/]+)\/?/); // 첫 세그먼트
+    if (m && m[1] !== 'index.html') base = '/' + m[1].replace(/index\.html$/,'') + '/';
+
+    const candidates = [
+      `${base}main.js`,     // 가장 가능성 큼 → /soccer/main.js
+      '/soccer/main.js',    // 절대 경로 고정
+      './main.js',          // 상대
+      'main.js'             // 느슨한 상대
+    ];
+
+    let ok = false, lastErr = null, tried = [];
+    for (const src of candidates) {
+      try {
+        tried.push(src);
+        await import(src + (src.includes('?') ? '' : `?v=${Date.now()}`));
+        ok = true;
+        break;
+      } catch (e) {
+        lastErr = e;
+        console.warn('[loader] fail:', src, e);
       }
-      if (!ok) {
-        const root = document.getElementById('root');
-        root.innerHTML = `
-          <div style="padding:24px;color:#fff">
-            <h2>main.js 로드를 실패했어요</h2>
-            <p>다음 경로를 순서대로 시도했지만 모두 실패했습니다:</p>
-            <pre style="background:#111a29;border:1px solid #2a3546;border-radius:12px;padding:12px">
-/soccer/main.js
-./main.js
-main.js
-            </pre>
-            <p>리포지토리의 <code>gh-pages</code> 또는 <code>main</code> 브랜치 루트에 <b>main.js</b>가 있는지 확인하세요.</p>
-            <p style="opacity:.8">마지막 에러: ${String(lastErr)}</p>
-          </div>`;
-      }
-    })();
+    }
+    if (!ok) {
+      const el = document.getElementById('err');
+      el.style.display='grid';
+      el.querySelector('pre').textContent =
+        `main.js 로드를 실패했습니다.\n\n시도한 경로:\n- ` + tried.join('\n- ') +
+        `\n\n마지막 에러:\n${String(lastErr)}\n\n※ 레포 root(브랜치 Pages 설정) 에 main.js 가 존재하는지 확인하세요.`;
+    }
   </script>
 </body>
 </html>
